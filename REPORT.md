@@ -4,7 +4,7 @@
 **Topic:** Implementation of SOLID principles (minimum 3)
 **Project:** `FragranceComposer`
 **Technology:** C# / .NET 10 (console application)
-**Author:** Daniel Nicorici
+**Author:** OBERȘT Eduard FAF_243
 **Repository branch:** `lab1`
 
 ---
@@ -408,49 +408,8 @@ Verification of the computed value — the calculation is reproducible by hand:
 
 ---
 
-## 7. Extension Scenario (proof that the design is open)
 
-The strongest argument for a SOLID design is how little has to change when a requirement
-arrives. Three plausible new requirements, and their cost in this codebase:
-
-| New requirement | Files added | Files modified |
-|---|---|---|
-| Support Parfum Extrait (25 %) | `Concentrations/ParfumExtrait.cs` | none (only the caller chooses it) |
-| Load ingredients from a JSON file | `Repositories/JsonIngredientRepository.cs` | `Program.cs` (one line) |
-| Export the label as HTML instead of console text | `Services/HtmlLabelWriter.cs` | `Program.cs` (one line) |
-| Add VAT to the cost | — | `CostCalculator.cs` only |
-
-No requirement in this list forces a change to `Fragrance`, `Ingredient`, `FragranceService` or
-to an existing concentration — which is the practical definition of a design that is open for
-extension and closed for modification.
-
----
-
-## 8. Known Limitations and Planned Improvements
-
-Stated honestly, since the current code is a lab-scale implementation rather than production code:
-
-1. **`Fragrance.Formula` is an exposed mutable `Dictionary`.** Any consumer can add or remove
-   ingredients after construction, which breaks the immutability the `get`-only properties
-   suggest. Fix: expose `IReadOnlyDictionary<Ingredient, double>`.
-2. **No validation that the formula sums to 100 %.** A formula of `{Rose: 500}` is accepted
-   silently. Fix: a dedicated `IFormulaValidator` — a new responsibility, therefore a new class
-   rather than extra code inside `FragranceService`.
-3. **`CostCalculator` mixes `double` and `decimal`.** The percentages are `double` and the prices
-   are `decimal`, with a cast in the middle of the expression. It is correct for these values but
-   fragile; percentages should become `decimal` throughout for monetary precision.
-4. **`LabelPrinter` writes straight to `Console`.** The class has a single responsibility, but it
-   is still bound to one output device. Introducing an `ILabelWriter` abstraction would apply DIP
-   to the presentation layer as well, and make the printer testable.
-5. **Object creation is done with `new` inside `Main`.** Acceptable for a composition root of
-   this size; a DI container (`Microsoft.Extensions.DependencyInjection`) would be the next step
-   if the object graph grows.
-6. **No automated tests.** The DIP-based design was chosen specifically to make
-   `FragranceService` testable with a fake repository; the tests themselves are future work.
-
----
-
-## 9. Conclusions
+## 7. Conclusions
 
 The laboratory work implements a small but genuinely layered C# application, and the three
 required SOLID principles are expressed structurally rather than nominally:
