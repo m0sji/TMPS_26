@@ -61,7 +61,7 @@ public class FragranceBuilder
 
         double total = _formula.Values.Sum();
         if (Math.Abs(total-100)>0.01)
-        throw new InvalidOperationException($"Formula must total 100%, got{total}%");
+        throw new InvalidOperationException($"Formula must total 100%, got {total}%");
 
         foreach (var layer in Enum.GetValues<NoteLayer>())
         if (!_formula.Keys.Any(i=> i.Layer == layer))
