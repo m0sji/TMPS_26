@@ -1,7 +1,8 @@
+using System.ComponentModel;
 using FragranceComposer.Interfaces;
 namespace FragranceComposer.Models;
 
-public class Fragrance
+public class Fragrance : IPrototype<Fragrance>
 {
     public string Name { get; }
     public ScentFamily Family {get;}
@@ -15,4 +16,8 @@ public class Fragrance
         Concentration = concentration;
         Formula = formula;
     }
+
+    public Fragrance Clone()=>CloneAs(Name);
+    public Fragrance CloneAs(string name, IConcentration? concentration = null)=>
+    new Fragrance(name, Family, concentration ?? Concentration, new Dictionary<Ingredient, double>(Formula));
 }
