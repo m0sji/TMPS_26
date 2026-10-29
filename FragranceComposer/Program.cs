@@ -5,7 +5,8 @@ using FragranceComposer.Repositories;
 using FragranceComposer.Interfaces;
 using FragranceComposer.Concentrations;
 using FragranceComposer.Factories;
-using System.Net.Http.Headers;
+using FragranceComposer.Prototypes;
+
 
 namespace FragranceComposer;
 
@@ -33,7 +34,7 @@ class Program
        Console.WriteLine();
 
 
-//2 Director with predifined receipts
+//2 Abstract Factory: the same receipt in 3 product lines
 IProductLineFactory[] lines=
         {
             new LuxuryLineFactory(),
@@ -66,6 +67,27 @@ try
             Console.WriteLine($"BUILD REJECTED: {ex.Message}");
         }
 
+
+//4.Prototype: register originals, create variants by cloninig
+Console.WriteLine("\n--- Prototype ---");
+var registry = new FragranceRegistry();
+registry.Register("summer", summer);
+registry.Register("vanilla-night", director.BuildGourmand("Vanilla Night", new EauDeParfum()));
+
+var summerCopy = registry.Get("summer");
+Console.WriteLine($"Same object as original? {ReferenceEquals(summer,summerCopy)}");
+Console.WriteLine($"Same formula instance? {ReferenceEquals(summer.Formula, summerCopy.Formula)}");
+
+var summerIntense = registry.Get("summer").CloneAs("Moldavian Summer Intense", new Parfum());
+printer.Print(summerIntense);
+Console.WriteLine($"Original unchanged: {summer.Name} ({summer.Concentration.Name})\n");
+
+//All 3 patterns together: cloned variant packaged by a product line
+var luxury = new LuxuryLineFactory();
+var extrait = registry.Get("vanilla-night").CloneAs("Vanilla Night Extrait", luxury.CreateConcentration());
+var extraitProduct = new Product(luxury.LineName, extrait, luxury.CreateBottle(), luxury.CreatePackaging());
+printer.Print(extraitProduct);
+Console.WriteLine($"Total cost: {costCalculator.Calculate(extraitProduct):F2} EUR");
 
     }
 }
