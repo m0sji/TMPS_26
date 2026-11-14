@@ -2,7 +2,7 @@ using System.ComponentModel;
 using FragranceComposer.Interfaces;
 namespace FragranceComposer.Models;
 
-public class Fragrance : IPrototype<Fragrance>
+public class Fragrance : IPrototype<Fragrance>, IScent
 {
     public string Name { get; }
     public ScentFamily Family {get;}
@@ -16,6 +16,9 @@ public class Fragrance : IPrototype<Fragrance>
         Concentration = concentration;
         Formula = formula;
     }
+
+    public IReadOnlyDictionary<Ingredient, double> Composition => Formula;
+    public decimal CostPerMl => (decimal)(Concentration.OilPercentage/100)* Formula.Sum(f => (decimal)(f.Value/100)* f.Key.PricePerMl);
 
     public Fragrance Clone()=>CloneAs(Name);
     public Fragrance CloneAs(string name, IConcentration? concentration = null)=>
