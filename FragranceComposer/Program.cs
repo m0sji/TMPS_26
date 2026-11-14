@@ -8,6 +8,7 @@ using FragranceComposer.Factories;
 using FragranceComposer.Prototypes;
 using FragranceComposer.Composites;
 using FragranceComposer.Proxies;
+using FragranceComposer.Decorators;
 
 namespace FragranceComposer;
 
@@ -19,7 +20,6 @@ class Program
        var builder = new FragranceBuilder(repository);
        var director = new FragranceDirector(builder);
        var printer = new LabelPrinter();
-       var costCalculator = new ProductCostCalculator(new CostCalculator());
 
 
        //1. Builder used directly
@@ -47,8 +47,9 @@ IProductLineFactory[] lines=
         {
             var fragrance = director.BuildAquatic ("Black Sea Breeze", line.CreateConcentration());
             var product = new Product(line.LineName, fragrance, line.CreateBottle(),line.CreatePackaging());
+            printer.Print(fragrance);
             printer.Print(product);
-            Console.WriteLine($"Total cost: {costCalculator.Calculate(product):F2} EUR\n");
+            Console.WriteLine();
         }
 
 
@@ -87,8 +88,8 @@ Console.WriteLine($"Original unchanged: {summer.Name} ({summer.Concentration.Nam
 var luxury = new LuxuryLineFactory();
 var extrait = registry.Get("vanilla-night").CloneAs("Vanilla Night Extrait", luxury.CreateConcentration());
 var extraitProduct = new Product(luxury.LineName, extrait, luxury.CreateBottle(), luxury.CreatePackaging());
+printer.Print(extrait);
 printer.Print(extraitProduct);
-Console.WriteLine($"Total cost: {costCalculator.Calculate(extraitProduct):F2} EUR");
 
 //5. Composite: one fragrance and layered combination used through the same ISCent
 Console.WriteLine("\n--- Composite ---");
@@ -135,7 +136,23 @@ foreach (var role in new[] { UserRole.Customer, UserRole.Perfumer })
             }
         }
 
-        
+//7. Decorator optional add ons stacjed on a product
+//path: decorators -> Product -> LayeredScent(composite) -> ProtectedScent(proxy) -> Fragrance
+Console.WriteLine("--- Decorator ---");
+session.SignIn(UserRole.Customer);
+IProduct plain = new Product(luxury.LineName, secretEvening, luxury.CreateBottle(), luxury.CreatePackaging());
+printer.Print(plain);
+
+IProduct gift = new GiftWrapDecorator(plain);
+gift = new EngravingDecorator(gift, "For Ana");
+gift = new SampleVialDecorator(gift, secret);
+printer.Print(gift);
+
+IProduct otherOrder =new GiftWrapDecorator(new EngravingDecorator(new SampleVialDecorator(plain, secret), "For Ana"));
+printer.Print(otherOrder);
+Console.WriteLine($"Same cost in any order? {gift.Cost == otherOrder.Cost}");
+
+
 
     }
 }

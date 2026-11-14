@@ -1,5 +1,5 @@
-using System.Net.Http.Headers;
 using FragranceComposer.Models;
+using FragranceComposer.Interfaces;
 namespace FragranceComposer.Services;
 
 public class LabelPrinter
@@ -11,11 +11,9 @@ public class LabelPrinter
         Console.WriteLine($"{f.Key.Layer} note: {f.Key.Name} {f.Value}%");
     }
 
-    public void Print(Product product)
+    public void Print(IProduct product)
     {
-        Console.WriteLine($"[{product.LineName} line]");
-        Print(product.Fragrance);
-        Console.WriteLine($"Bottle: {product.Bottle.Name} ({product.Bottle.VolumeMl} ml)");
-        Console.WriteLine($"Packaging: {product.Packaging.Name}");
+        Console.WriteLine($"Product: {product.Description}");
+        Console.WriteLine($"Total cost: {product.Cost:F2} EUR");
     }
 }
