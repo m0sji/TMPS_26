@@ -7,7 +7,7 @@ using FragranceComposer.Concentrations;
 using FragranceComposer.Factories;
 using FragranceComposer.Prototypes;
 using FragranceComposer.Composites;
-
+using FragranceComposer.Proxies;
 
 namespace FragranceComposer;
 
@@ -108,6 +108,34 @@ IScent weekendRitual = new LayeredScent("Weekend Ritual")
 
 foreach(IScent scent in new[] { seaBreeze, beachEvening, weekendRitual})
 scentPrinter.Print(scent);
+
+//6. Proxy a secret formula everyone sees name and price only a perfumer sees the composition
+Console.WriteLine("--- Proxy ---");
+var session = new UserSession();
+IScent secret = new ProtectedScent(registry.Get("vanilla-night").CloneAs("Maison Secret No. 1"), session);
+IScent secretEvening = new LayeredScent("Secret Evening")
+.Add(secret, 2)
+.Add(seaBreeze, 1);
+
+foreach (var role in new[] { UserRole.Customer, UserRole.Perfumer })
+        {
+            session.SignIn(role);
+            Console.WriteLine($"[signed in as {role}]");
+            foreach (IScent scent in new[] {secret, secretEvening})
+            {
+                Console.WriteLine($"{scent.Name} costs {scent.CostPerMl:F4} EUR per ml");
+                try
+                {
+                    scentPrinter.Print(scent);
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    Console.WriteLine($"ACCESS DENIED: {ex.Message}\n");
+                }
+            }
+        }
+
+        
 
     }
 }
