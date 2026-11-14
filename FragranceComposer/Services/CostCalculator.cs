@@ -1,11 +1,8 @@
-using FragranceComposer.Models;
+using FragranceComposer.Interfaces;
 namespace FragranceComposer.Services;
 
 public class CostCalculator
 {
-    public decimal Calculate(Fragrance fragrance, double bottleMl)
-    {
-        double oilMl = bottleMl * fragrance.Concentration.OilPercentage / 100;
-        return fragrance.Formula.Sum(f => (decimal)(oilMl * f.Value / 100) * f.Key.PricePerMl);
-    }
+    public decimal Calculate(IScent scent, double bottleML) =>
+    (decimal)bottleML * scent.CostPerMl;
 }

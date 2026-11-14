@@ -6,6 +6,7 @@ using FragranceComposer.Interfaces;
 using FragranceComposer.Concentrations;
 using FragranceComposer.Factories;
 using FragranceComposer.Prototypes;
+using FragranceComposer.Composites;
 
 
 namespace FragranceComposer;
@@ -88,6 +89,25 @@ var extrait = registry.Get("vanilla-night").CloneAs("Vanilla Night Extrait", lux
 var extraitProduct = new Product(luxury.LineName, extrait, luxury.CreateBottle(), luxury.CreatePackaging());
 printer.Print(extraitProduct);
 Console.WriteLine($"Total cost: {costCalculator.Calculate(extraitProduct):F2} EUR");
+
+//5. Composite: one fragrance and layered combination used through the same ISCent
+Console.WriteLine("\n--- Composite ---");
+var scentPrinter = new ScentPrinter();
+var classic = new ClassicLineFactory();
+
+IScent seaBreeze = director.BuildAquatic("Black Sea Breeze", classic.CreateConcentration());
+IScent vanillaNight = registry.Get("vanilla-night");
+
+IScent beachEvening = new LayeredScent("Beach Evening")
+.Add(seaBreeze, 2)
+.Add(vanillaNight, 1);
+
+IScent weekendRitual = new LayeredScent("Weekend Ritual")
+.Add(beachEvening, 3)
+.Add(registry.Get("summer"), 1);
+
+foreach(IScent scent in new[] { seaBreeze, beachEvening, weekendRitual})
+scentPrinter.Print(scent);
 
     }
 }
