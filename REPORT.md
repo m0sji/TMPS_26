@@ -1,49 +1,36 @@
-# Laboratory Work Nr. 2 — Creational Design Patterns
+# Laboratory Work Nr. 3. Structural Design Patterns
 
-**Course:** TMPS — Software Design Techniques and Mechanisms
-**Topic:** Implementation of creational design patterns (minimum 3)
-**Project:** `FragranceComposer`
-**Technology:** C# / .NET 10 (console application)
-**Author:** OBERȘT Eduard FAF_243
-**Repository branch:** `lab2`
+Course: TMPS, Software Design Techniques and Mechanisms\
+Topic: Implementation of structural design patterns\
+Project: `FragranceComposer`\
+Technology: C# / .NET 10 console application, xUnit for unit tests\
+Author: Oberșt Eduard, FAF-243\
+Repository branch: `lab3`
 
 ---
 
 ## 1. Objectives
 
-1. Study the creational design patterns and the object-instantiation problems they address.
-2. Extend the domain from Laboratory Work Nr. 1 with entities whose creation is genuinely non-trivial, and choose an appropriate instantiation mechanism for each of them.
-3. Implement **at least three** creational patterns, each one solving a real creation problem of the domain rather than being added for its own sake.
-4. Keep the SOLID structure obtained in Lab 1 intact, and document the resulting architecture and design decisions.
+1. Study the structural design patterns and the problems they solve when objects are combined into bigger structures.
+2. Extend the FragranceComposer domain from Labs 1 and 2 with three structural patterns, each one solving a real problem of the domain.
+3. Connect the patterns on one execution path, with client code that depends only on abstractions.
+4. Prove the key property of every pattern with unit tests that run with `dotnet test`.
 
 ---
 
-## 2. The Idea — Domain Description
+## 2. Domain Description
 
-Lab 1 modelled a perfumer **composing** a fragrance: a formula of ingredients, each belonging to a
-note layer (top / heart / base), diluted according to a concentration class. Lab 2 follows the
-same fragrance one step further — **from the laboratory to the shelf**:
+FragranceComposer is a console application that models the work of a small perfume house. A perfumer composes a fragrance from ingredients, and every ingredient belongs to the top, heart or base notes and has a price per ml. The finished fragrance is released as a product in the Luxury, Classic or Travel line, and each line has its own concentration, bottle and packaging. Lab 1 added the formula and its cost, and Lab 2 added the Builder, Abstract Factory and Prototype patterns for creating fragrances and products.
 
-- a fragrance is now also classified by its **scent family** (`Citrus`, `Aquatic`, `Floral`, `Woody`, `Gourmand`, `Aromatic`);
-- a finished fragrance is released as a **product** in one of several **product lines** — *Luxury*, *Classic*, *Travel* — and each line has its own concentration, bottle and packaging;
-- a successful fragrance gets **variants** (in the industry: *flankers* — the *Intense*, *Extrait* or *Night* edition of an existing scent) that keep the formula and change the name or the concentration.
+This laboratory work adds fragrance layering, which means wearing two or more fragrances at the same time to get a new scent. A real example is Maison Margiela Sailing Day layered with Never Ending Summer. Layering brings three new situations into the domain, and each of them is solved by one structural pattern.
 
-These additions produce three distinct creation problems, and each one is solved by a different
-creational pattern:
-
-| # | Creation problem in the domain | Why a plain `new` is not enough | Pattern |
+| # | Situation in the domain | Pattern | Main classes |
 |---|---|---|---|
-| 1 | A fragrance is assembled note by note and must obey formula rules (the percentages total 100 %, top, heart and base notes are all present) | a 4-argument constructor taking a dictionary accepts *any* formula, including invalid ones, and the rules span several arguments at once | **Builder** (+ Director) |
-| 2 | A product line is a *family* of parts that must match: Luxury = Parfum + crystal bottle + gift box, Travel = Eau de Toilette + 10 ml spray + pouch | the client could put Parfum in a pouch or a travel spray in a gift box, and every client would have to know every concrete component | **Abstract Factory** |
-| 3 | A flanker is derived from an existing, already-approved fragrance | rebuilding the formula note by note duplicates the recipe; copying fields by hand risks sharing the formula collection between original and copy | **Prototype** (+ registry) |
+| 1 | A layered scent is made of fragrances or of other layered scents, but a product or a printer should use it like one fragrance | Composite | `IScent`, `Fragrance`, `LayeredScent` |
+| 2 | The formula of a signature fragrance is a trade secret. Everyone can see its name and price, but only a perfumer can read the composition | Proxy | `ProtectedScent`, `IUserSession` |
+| 3 | A customer can add gift wrap, an engraving or a sample vial to a product in any combination, and each add-on changes the description and the price | Decorator | `IProduct`, `ProductDecorator` and three add-ons |
 
-The program runs five scenarios that exercise the patterns separately and then together:
-
-1. *"Moldavian Summer"* — built directly with the **Builder** (Floral, Eau de Parfum).
-2. *"Black Sea Breeze"* — the Aquatic recipe from the **Director**, released in all three product lines through the **Abstract Factory**, with the total cost of each product.
-3. *"Broken"* — an invalid formula (only 90 %) that the **Builder** rejects.
-4. *"Moldavian Summer Intense"* — a **Prototype** clone of scenario 1 with a stronger concentration.
-5. *"Vanilla Night Extrait"* — **all three patterns in one chain**: built by the Director, stored in the registry, cloned as a variant and packaged by the Luxury line.
+The program shows the patterns in three new sections of `Program.cs`. Section 5 builds two layered scents, Beach Evening and Weekend Ritual, where the second one contains the first. Section 6 protects a secret fragrance, Maison Secret No. 1, and shows what a customer and a perfumer can see. Section 7 sells a layered scent that contains the secret as a Luxury product and adds gift wrap, an engraving and a sample vial to it.
 
 ---
 
@@ -51,266 +38,78 @@ The program runs five scenarios that exercise the patterns separately and then t
 
 ```
 FragranceComposer/
-├── Builders/                                   (new)
-│   ├── FragranceBuilder.cs                     — step-by-step construction + formula validation
-│   └── FragranceDirector.cs                    — predefined recipes (Aquatic, Gourmand)
-├── Factories/                                  (new)
-│   ├── IProductLineFactory.cs                  — abstract factory: concentration + bottle + packaging
-│   ├── LuxuryLineFactory.cs                    — Parfum + Crystal bottle + Gift box
-│   ├── ClassicLineFactory.cs                   — Eau de Parfum + Glass bottle + Cardboard box
-│   └── TravelLineFactory.cs                    — Eau de Toilette + Travel spray bottle + Pouch
-├── Prototypes/                                 (new)
-│   └── FragranceRegistry.cs                    — stores originals, hands out clones
-├── Components/                                 (new)
-│   ├── CrystalBottle.cs                        — IBottle, 100 ml
-│   ├── GlassBottle.cs                          — IBottle, 50 ml
-│   ├── TravelSprayBottle.cs                    — IBottle, 10 ml
-│   ├── GiftBox.cs                              — IPackaging
-│   ├── CardboardBox.cs                         — IPackaging
-│   └── Pouch.cs                                — IPackaging
-├── Concentrations/
-│   ├── EauDeToilette.cs                        — 10 % oil
-│   ├── EauDeParfum.cs                          — 18 % oil
-│   └── Parfum.cs                               — 25 % oil                              (new)
+├── Builders/            FragranceBuilder, FragranceDirector              (unchanged, Lab 2)
+├── Factories/           IProductLineFactory + 3 line factories           (unchanged, Lab 2)
+├── Prototypes/          FragranceRegistry                                (unchanged, Lab 2)
+├── Components/          bottles and packaging                            (unchanged, Lab 2)
+├── Concentrations/      EauDeToilette, EauDeParfum, Parfum               (unchanged)
+├── Repositories/        InMemoryIngredientRepository                     (unchanged)
+├── Composites/                                                           (new)
+│   └── LayeredScent.cs           composite of (IScent, sprays) layers
+├── Proxies/                                                              (new)
+│   └── ProtectedScent.cs         hides the composition of a secret scent
+├── Decorators/                                                           (new)
+│   ├── ProductDecorator.cs       abstract base, forwards to the wrapped IProduct
+│   ├── GiftWrapDecorator.cs      + 3.50 EUR
+│   ├── EngravingDecorator.cs     + 6.00 EUR, custom text
+│   └── SampleVialDecorator.cs    + 2 ml of another scent + 0.60 EUR vial
 ├── Interfaces/
-│   ├── IConcentration.cs                       — abstraction over the oil-content family
-│   ├── IIngredientRepository.cs                — abstraction over the ingredient catalogue
-│   ├── IBottle.cs                              — name, volume, price                   (new)
-│   ├── IPackaging.cs                           — name, price                           (new)
-│   └── IPrototype.cs                           — generic Clone() contract              (new)
+│   ├── IScent.cs                 name, composition, cost per ml          (new)
+│   ├── IUserSession.cs           role of the current user                (new)
+│   ├── Product.cs                IProduct, description and cost          (new)
+│   └── ...                       IConcentration, IBottle, IPackaging ... (unchanged)
 ├── Models/
-│   ├── Ingredient.cs                           — raw material: name, note layer, price per ml
-│   ├── Fragrance.cs                            — + Family, read-only Formula, Clone   (changed)
-│   ├── ScentFamily.cs                          — Citrus, Aquatic, Floral, …           (new)
-│   └── Product.cs                              — fragrance + bottle + packaging        (new)
-├── Repositories/
-│   └── InMemoryIngredientRepository.cs         — catalogue extended to 10 ingredients  (changed)
+│   ├── Fragrance.cs              now also implements IScent              (changed)
+│   ├── Product.cs                holds an IScent, implements IProduct    (changed)
+│   ├── UserRole.cs               Customer, Perfumer                      (new)
+│   └── ...                       Ingredient, NoteLayer, ScentFamily      (unchanged)
 ├── Services/
-│   ├── CostCalculator.cs                       — oil cost for a bottle size (unchanged)
-│   ├── ProductCostCalculator.cs                — oil + bottle + packaging              (new)
-│   └── LabelPrinter.cs                         — + Print(Product)                      (changed)
-└── Program.cs                                  — client / demo scenarios
+│   ├── ScentPrinter.cs           prints any IScent                       (new)
+│   ├── UserSession.cs            IUserSession with SignIn(role)          (new)
+│   ├── LabelPrinter.cs           Print(Product) became Print(IProduct)   (changed)
+│   ├── CostCalculator.cs                                                 (removed)
+│   └── ProductCostCalculator.cs                                          (removed)
+└── Program.cs                    demo sections 5, 6 and 7 added          (changed)
+FragranceComposer.Tests/                                                  (new)
+├── CompositeTests.cs             4 tests
+├── ProxyTests.cs                 3 tests
+├── DecoratorTests.cs             3 tests
+└── FragranceComposer.Tests.csproj
+FragranceComposer.slnx            test project added                      (changed)
 ```
 
-`Services/FragranceService.cs` from Lab 1 was **removed**: its only job — turning ingredient names
-and percentages into a `Fragrance` — is now done by `FragranceBuilder`, which also validates the
-result (see §5.1 and §5.5).
+`CostCalculator` and `ProductCostCalculator` from Lab 2 were removed. Both of them accepted only a `Fragrance`, so they could not price a layered scent. The same formula now lives in `IScent.CostPerMl`, where every kind of scent calculates its own price per ml, and in `Product.Cost`, which adds the bottle and the packaging. The Lab 2 scenarios still print 61.00, 17.44, 3.36 and 86.88 EUR, the same totals as in the Lab 2 report.
 
 ---
 
-## 4. Architecture Diagrams
+## 4. Implemented Structural Patterns
 
-### 4.1 Component view
+Each pattern below has the problem it solves, a table of GoF roles, a class diagram, the code where the pattern is best seen and its unit tests. In the class diagrams, a dashed line with a hollow triangle means implements, a solid line with a hollow triangle means extends, and a line with a diamond means has-a. The notes next to the classes show the GoF role of each class.
 
-```mermaid
-graph TD
-    P["Program.cs<br/><i>client</i>"]
+### 4.1 Composite
 
-    subgraph BuilderGroup["Builder"]
-        DIR["FragranceDirector"]
-        B["FragranceBuilder"]
-    end
+#### Problem
 
-    subgraph FactoryGroup["Abstract Factory"]
-        AF["IProductLineFactory"]
-        LUX["LuxuryLineFactory"]
-        CLA["ClassicLineFactory"]
-        TRV["TravelLineFactory"]
-    end
+A layered scent is described by its layers and by the number of sprays of each one. A layer is usually one fragrance, but it can also be another layered scent. For example, Weekend Ritual in the demo is three sprays of Beach Evening, which is already a layering of two fragrances, plus one spray of Moldavian Summer. `Product`, `ScentPrinter` and the cost calculation should not care which of these cases they get. Composite solves this by giving the single fragrance and the group the same interface, `IScent`, so the group can answer every question by asking its layers.
 
-    subgraph PrototypeGroup["Prototype"]
-        REG["FragranceRegistry"]
-        IP["IPrototype#lt;T#gt;"]
-    end
+| GoF role | Class | Responsibility here |
+|---|---|---|
+| Component | `IScent` | Name, composition and cost per ml of anything that can be worn |
+| Leaf | `Fragrance` | Returns its own formula and calculates its own cost per ml |
+| Composite | `LayeredScent` | Stores `(IScent, sprays)` layers and combines their compositions and costs |
+| Client | `Product`, `ScentPrinter`, `Program` | Use `IScent` and do not know if it is one fragrance or a group |
 
-    subgraph Services["Services"]
-        LP["LabelPrinter"]
-        PCC["ProductCostCalculator"]
-        CC["CostCalculator"]
-    end
-
-    subgraph Models["Models"]
-        FR["Fragrance"]
-        PR["Product"]
-    end
-
-    IR["IIngredientRepository"]
-    REPO["InMemoryIngredientRepository"]
-
-    P --> DIR
-    P --> B
-    P --> AF
-    P --> REG
-    P --> LP
-    P --> PCC
-    P -. "injects" .-> REPO
-
-    DIR --> B
-    B --> IR
-    REPO -.implements.-> IR
-    B -. "builds" .-> FR
-
-    LUX -.implements.-> AF
-    CLA -.implements.-> AF
-    TRV -.implements.-> AF
-    AF -. "supplies parts of" .-> PR
-
-    REG -. "clones" .-> FR
-    FR -.implements.-> IP
-
-    PR --> FR
-    PCC --> CC
-    PCC --> PR
-    CC --> FR
-    LP --> PR
-    LP --> FR
-
-    classDef root fill:#2d3748,stroke:#1a202c,color:#fff
-    classDef abs fill:#2c5282,stroke:#1a365d,color:#fff
-    class P root
-    class AF,IP,IR abs
-```
-
-> Each creational group has exactly one entry point for the client: `FragranceDirector` /
-> `FragranceBuilder` for *assembling* a fragrance, `IProductLineFactory` for *choosing the parts* of a
-> product, `FragranceRegistry` for *deriving* a variant.
-
-### 4.2 Builder — class diagram
-
-```mermaid
-classDiagram
-    direction LR
-
-    class FragranceDirector {
-        -FragranceBuilder _builder
-        +BuildAquatic(name, concentration) Fragrance
-        +BuildGourmand(name, concentration) Fragrance
-    }
-
-    class FragranceBuilder {
-        -IIngredientRepository _repository
-        -string? _name
-        -ScentFamily? _family
-        -IConcentration? _concentration
-        -Dictionary~Ingredient,double~ _formula
-        +WithName(name) FragranceBuilder
-        +WithFamily(family) FragranceBuilder
-        +WithConcentration(concentration) FragranceBuilder
-        +AddNote(ingredientName, percent) FragranceBuilder
-        +Build() Fragrance
-        +Reset() void
-        -Validate() void
-    }
-
-    class IIngredientRepository {
-        <<interface>>
-        +GetByName(string name) Ingredient
-    }
-
-    class Fragrance {
-        +string Name
-        +ScentFamily Family
-        +IConcentration Concentration
-        +IReadOnlyDictionary~Ingredient,double~ Formula
-    }
-
-    class ScentFamily {
-        <<enumeration>>
-        Citrus
-        Aquatic
-        Floral
-        Woody
-        Gourmand
-        Aromatic
-    }
-
-    FragranceDirector --> FragranceBuilder : drives
-    FragranceBuilder --> IIngredientRepository : resolves names
-    FragranceBuilder ..> Fragrance : builds
-    Fragrance --> ScentFamily
-```
-
-### 4.3 Abstract Factory — class diagram
+#### Class diagram
 
 ```mermaid
 classDiagram
     direction TB
 
-    class IProductLineFactory {
-        <<interface>>
-        +string LineName
-        +CreateConcentration() IConcentration
-        +CreateBottle() IBottle
-        +CreatePackaging() IPackaging
-    }
-    class LuxuryLineFactory
-    class ClassicLineFactory
-    class TravelLineFactory
-
-    class IConcentration {
+    class IScent {
         <<interface>>
         +string Name
-        +double OilPercentage
-    }
-    class IBottle {
-        <<interface>>
-        +string Name
-        +double VolumeMl
-        +decimal Price
-    }
-    class IPackaging {
-        <<interface>>
-        +string Name
-        +decimal Price
-    }
-
-    class Product {
-        +string LineName
-        +Fragrance Fragrance
-        +IBottle Bottle
-        +IPackaging Packaging
-    }
-
-    IProductLineFactory <|.. LuxuryLineFactory
-    IProductLineFactory <|.. ClassicLineFactory
-    IProductLineFactory <|.. TravelLineFactory
-
-    IConcentration <|.. Parfum
-    IConcentration <|.. EauDeParfum
-    IConcentration <|.. EauDeToilette
-    IBottle <|.. CrystalBottle
-    IBottle <|.. GlassBottle
-    IBottle <|.. TravelSprayBottle
-    IPackaging <|.. GiftBox
-    IPackaging <|.. CardboardBox
-    IPackaging <|.. Pouch
-
-    LuxuryLineFactory ..> Parfum
-    LuxuryLineFactory ..> CrystalBottle
-    LuxuryLineFactory ..> GiftBox
-    ClassicLineFactory ..> EauDeParfum
-    ClassicLineFactory ..> GlassBottle
-    ClassicLineFactory ..> CardboardBox
-    TravelLineFactory ..> EauDeToilette
-    TravelLineFactory ..> TravelSprayBottle
-    TravelLineFactory ..> Pouch
-
-    Product --> IBottle
-    Product --> IPackaging
-```
-
-> Dashed arrows from a factory mean *creates*. Every concrete factory creates exactly one product of
-> each kind, and those three products always belong to the same line.
-
-### 4.4 Prototype — class diagram
-
-```mermaid
-classDiagram
-    direction LR
-
-    class IPrototype~T~ {
-        <<interface>>
-        +Clone() T
+        +IReadOnlyDictionary~Ingredient,double~ Composition
+        +decimal CostPerMl
     }
 
     class Fragrance {
@@ -318,519 +117,596 @@ classDiagram
         +ScentFamily Family
         +IConcentration Concentration
         +IReadOnlyDictionary~Ingredient,double~ Formula
+        +IReadOnlyDictionary~Ingredient,double~ Composition
+        +decimal CostPerMl
         +Clone() Fragrance
         +CloneAs(string name, IConcentration? concentration) Fragrance
     }
 
-    class FragranceRegistry {
-        -Dictionary~string,Fragrance~ _prototype
-        +Register(string key, Fragrance prototype) void
-        +Get(string key) Fragrance
+    class LayeredScent {
+        -List~ValueTuple~IScent,int~~ _layers
+        +string Name
+        +LayeredScent(string name)
+        +Add(IScent scent, int sprays) LayeredScent
+        +IReadOnlyDictionary~Ingredient,double~ Composition
+        +decimal CostPerMl
+        -TotalSprays() int
     }
 
-    IPrototype <|.. Fragrance : T = Fragrance
-    FragranceRegistry "1" o-- "*" Fragrance : stores originals
+    class ScentPrinter {
+        +Print(IScent scent) void
+    }
+
+    class Product {
+        +IScent Scent
+        +decimal Cost
+    }
+
+    IScent <|.. Fragrance : implements
+    IScent <|.. LayeredScent : implements
+    LayeredScent "1" o-- "1..*" IScent : has-a, layers with sprays
+    ScentPrinter ..> IScent : uses
+    Product --> IScent : has-a
+
+    note for IScent "Component"
+    note for Fragrance "Leaf"
+    note for LayeredScent "Composite"
+    note for ScentPrinter "Client"
+    note for Product "Client"
 ```
 
-### 4.5 Sequence of the combined scenario (all three patterns)
+#### Code
+
+[FragranceComposer/Composites/LayeredScent.cs, lines 22-39](FragranceComposer/Composites/LayeredScent.cs#L22-L39)
+
+```csharp
+    public IReadOnlyDictionary<Ingredient, double> Composition
+    {
+        get
+        {
+            int total = TotalSprays();
+            var combined = new Dictionary<Ingredient, double>();
+            foreach (var (scent,sprays) in _layers)
+            foreach(var note in scent.Composition)
+            combined[note.Key] = combined.GetValueOrDefault(note.Key)+note.Value*sprays/total;
+            return combined;
+        }
+    }
+
+    public decimal CostPerMl => _layers.Sum(l => l.Scent.CostPerMl*l.Sprays)/TotalSprays();
+    private int TotalSprays()=>
+    _layers.Count >0
+    ? _layers.Sum(l => l.Sprays)
+    : throw new InvalidOperationException($"Layered scent '{Name}' has no layers");
+```
+
+`LayeredScent` reads `Composition` and `CostPerMl` of its layers only through `IScent`, so a layer that is another `LayeredScent` runs the same code one level lower and nesting works without any type checks. Each note is multiplied by the share of sprays of its layer, so the combined composition still totals 100%, and an ingredient that appears in several layers, like Bergamot, is merged into one entry.
+
+#### Unit tests
+
+| Test | What it checks |
+|---|---|
+| `LeafAndComposite_AreUsedThroughTheSameInterface` | The same helper method, which accepts an `IScent`, gets a 100% total from a single `Fragrance` and from a `LayeredScent`. The leaf and the composite are used in exactly the same way. |
+| `Composite_WeightsCompositionAndCostBySprays` | With 2 sprays of the aquatic and 1 spray of the gourmand, Sea Notes become 20 × 2/3 = 13.33%, Vanilla becomes 40 × 1/3 = 13.33%, Bergamot from both layers is merged into one entry of 15%, and the cost per ml is the weighted average of the two costs. |
+| `Composite_CanContainAnotherComposite` | A layered scent inside another layered scent gives the aquatic a share of 1/2 × 1/2 + 1/2 = 3/4 and the gourmand 1/4 of the cost, and the composition still totals 100%. |
+| `EmptyComposite_Throws` | A `LayeredScent` without layers throws `InvalidOperationException` for both `Composition` and `CostPerMl` instead of dividing by zero. |
+
+Test log. The build and discovery lines are left out here and in the next sections.
+
+```
+$ dotnet test --filter "FullyQualifiedName~CompositeTests" --logger "console;verbosity=normal"
+  Passed FragranceComposer.Tests.CompositeTests.Composite_WeightsCompositionAndCostBySprays [44 ms]
+  Passed FragranceComposer.Tests.CompositeTests.EmptyComposite_Throws [2 ms]
+  Passed FragranceComposer.Tests.CompositeTests.LeafAndComposite_AreUsedThroughTheSameInterface [< 1 ms]
+  Passed FragranceComposer.Tests.CompositeTests.Composite_CanContainAnotherComposite [< 1 ms]
+Test Run Successful.
+Total tests: 4
+     Passed: 4
+ Total time: 1.9557 Seconds
+```
+
+### 4.2 Proxy
+
+#### Problem
+
+A perfume house keeps the formula of its signature fragrance secret. A customer still needs the name and the price, and a layered scent or a product needs the cost per ml to calculate its own price. Only a perfumer can see which ingredients are inside and in what percentages. Putting a role check inside `Fragrance` would mix an access rule with the domain model and break the Single Responsibility Principle from Lab 1. The Proxy keeps the check in a separate class with the same interface as the real scent, so the classes that use scents do not change. This kind of proxy is called a protection proxy.
+
+| GoF role | Class | Responsibility here |
+|---|---|---|
+| Subject | `IScent` | The interface shared by the proxy and the real scent |
+| RealSubject | `Fragrance` | The secret fragrance, Maison Secret No. 1 in the demo. Any `IScent` can be wrapped |
+| Proxy | `ProtectedScent` | Passes `Name` and `CostPerMl` through and checks the role before `Composition` |
+| Used by the proxy | `IUserSession`, `UserSession`, `UserRole` | Tell the proxy who is signed in |
+| Client | `LayeredScent`, `ScentPrinter`, `SampleVialDecorator`, `Program` | Use the protected scent as a normal `IScent` |
+
+#### Class diagram
 
 ```mermaid
-sequenceDiagram
-    participant M as Program
-    participant D as FragranceDirector
-    participant B as FragranceBuilder
-    participant R as FragranceRegistry
-    participant F as LuxuryLineFactory
-    participant C as ProductCostCalculator
+classDiagram
+    direction TB
 
-    M->>D: BuildGourmand("Vanilla Night", EauDeParfum)
-    D->>B: WithName / WithFamily / WithConcentration
-    loop for each note
-        D->>B: AddNote(ingredient, percent)
-    end
-    D->>B: Build()
-    B->>B: Validate(), then Reset()
-    B-->>M: Fragrance "Vanilla Night"
+    class IScent {
+        <<interface>>
+        +string Name
+        +IReadOnlyDictionary~Ingredient,double~ Composition
+        +decimal CostPerMl
+    }
 
-    M->>R: Register("vanilla-night", fragrance)
-    M->>R: Get("vanilla-night")
-    R-->>M: Clone() — new object, copied formula
+    class ProtectedScent {
+        -IScent _scent
+        -IUserSession _session
+        +ProtectedScent(IScent scent, IUserSession session)
+        +string Name
+        +decimal CostPerMl
+        +IReadOnlyDictionary~Ingredient,double~ Composition
+    }
 
-    M->>F: CreateConcentration()
-    F-->>M: Parfum (25 %)
-    M->>M: CloneAs("Vanilla Night Extrait", Parfum)
+    class Fragrance {
+        +string Name
+        +IReadOnlyDictionary~Ingredient,double~ Composition
+        +decimal CostPerMl
+    }
 
-    M->>F: CreateBottle() / CreatePackaging()
-    F-->>M: CrystalBottle, GiftBox
-    M->>M: new Product("Luxury", extrait, bottle, packaging)
+    class IUserSession {
+        <<interface>>
+        +UserRole CurrentRole
+    }
 
-    M->>C: Calculate(product)
-    C-->>M: 86.88 EUR
+    class UserSession {
+        +UserRole CurrentRole
+        +SignIn(UserRole role) void
+    }
+
+    class UserRole {
+        <<enumeration>>
+        Customer
+        Perfumer
+    }
+
+    class LayeredScent {
+        +Add(IScent scent, int sprays) LayeredScent
+        +IReadOnlyDictionary~Ingredient,double~ Composition
+    }
+
+    IScent <|.. ProtectedScent : implements
+    IScent <|.. Fragrance : implements
+    ProtectedScent --> IScent : has-a, the real scent
+    ProtectedScent --> IUserSession : has-a, checks the role
+    IUserSession <|.. UserSession : implements
+    IUserSession ..> UserRole
+    LayeredScent o-- IScent : has-a, layers
+
+    note for IScent "Subject"
+    note for ProtectedScent "Proxy. Composition throws UnauthorizedAccessException unless the role is Perfumer"
+    note for Fragrance "RealSubject"
+    note for LayeredScent "Client"
 ```
+
+#### Code
+
+[FragranceComposer/Proxies/ProtectedScent.cs, lines 5-28](FragranceComposer/Proxies/ProtectedScent.cs#L5-L28)
+
+```csharp
+public class ProtectedScent : IScent
+{
+    private readonly IScent _scent;
+    private readonly IUserSession _session;
+
+    public ProtectedScent(IScent scent, IUserSession session)
+    {
+        _scent = scent;
+        _session = session;
+    }
+
+    public string Name => _scent.Name;
+    public decimal CostPerMl => _scent.CostPerMl;
+
+    public IReadOnlyDictionary<Ingredient, double> Composition
+    {
+        get
+        {
+            if (_session.CurrentRole != UserRole.Perfumer)
+            throw new UnauthorizedAccessException($"The formula of '{_scent.Name}' is secret; {_session.CurrentRole} cannot read it");
+            return _scent.Composition;
+        }
+    }
+}
+```
+
+`Name` and `CostPerMl` go straight to the real scent, but `Composition` first asks `IUserSession` for the current role and throws `UnauthorizedAccessException` if the user is not a perfumer. Because `ProtectedScent` implements the same `IScent` interface as `Fragrance`, the classes that use it cannot tell the difference, and a perfumer gets the original dictionary with no copy or change.
+
+#### Unit tests
+
+| Test | What it checks |
+|---|---|
+| `Customer_CanReadNameAndCost_ButNotComposition` | Signed in as a customer, the proxy returns the same name and cost per ml as the real scent, and reading `Composition` throws `UnauthorizedAccessException`. |
+| `Perfumer_GetsTheRealCompositionUnchanged` | Signed in as a perfumer, the proxy returns the same dictionary object as the real scent (`Assert.Same`), so an authorized call is passed through without changes. |
+| `CompositeContainingProxy_HidesCompositionButStillGivesCost` | A layered scent that contains the proxy still gives its cost per ml to a customer, but its composition is blocked. For a perfumer the same layered scent returns a composition that totals 100%. |
+
+```
+$ dotnet test --filter "FullyQualifiedName~ProxyTests" --logger "console;verbosity=normal"
+  Passed FragranceComposer.Tests.ProxyTests.Customer_CanReadNameAndCost_ButNotComposition [47 ms]
+  Passed FragranceComposer.Tests.ProxyTests.CompositeContainingProxy_HidesCompositionButStillGivesCost [13 ms]
+  Passed FragranceComposer.Tests.ProxyTests.Perfumer_GetsTheRealCompositionUnchanged [< 1 ms]
+Test Run Successful.
+Total tests: 3
+     Passed: 3
+ Total time: 1.9272 Seconds
+```
+
+The third test covers a case that is easy to miss. If a customer could read the composition of a layered scent that contains the secret, they could subtract the public formula of the other fragrance and get the secret formula back. Because `LayeredScent` reads every layer through `IScent`, the check in the proxy runs for the whole layered scent too.
+
+### 4.3 Decorator
+
+#### Problem
+
+When a customer buys a perfume, they can add gift wrap, an engraving on the bottle or a 2 ml sample vial of another scent. Any combination is possible, and every add-on changes both the description and the price. One subclass of `Product` for every combination would already need 7 classes for 3 add-ons, and the number doubles with each new add-on. Boolean flags inside `Product` would mean editing `Product` every time the shop offers a new service. A decorator wraps the product, adds one thing and passes the rest of the work to the wrapped object, so the add-ons are combined at runtime.
+
+| GoF role | Class | Responsibility here |
+|---|---|---|
+| Component | `IProduct` | Description and cost of anything that can be sold |
+| ConcreteComponent | `Product` | A scent, a bottle and packaging from a product line factory |
+| Decorator | `ProductDecorator` | Abstract base. Holds the wrapped `IProduct` and forwards both properties to it |
+| ConcreteDecorator | `GiftWrapDecorator`, `EngravingDecorator`, `SampleVialDecorator` | Each adds the text and the price of one add-on |
+| Client | `LabelPrinter`, `Program` | Print and price any `IProduct`, plain or decorated |
+
+#### Class diagram
+
+```mermaid
+classDiagram
+    direction TB
+
+    class IProduct {
+        <<interface>>
+        +string Description
+        +decimal Cost
+    }
+
+    class Product {
+        +string LineName
+        +IScent Scent
+        +IBottle Bottle
+        +IPackaging Packaging
+        +Product(string lineName, IScent scent, IBottle bottle, IPackaging packaging)
+        +string Description
+        +decimal Cost
+    }
+
+    class ProductDecorator {
+        <<abstract>>
+        -IProduct _product
+        #ProductDecorator(IProduct product)
+        +string Description
+        +decimal Cost
+    }
+
+    class GiftWrapDecorator {
+        -decimal Price = 3.5
+        +string Description
+        +decimal Cost
+    }
+
+    class EngravingDecorator {
+        -decimal Price = 6.0
+        -string _text
+        +string Description
+        +decimal Cost
+    }
+
+    class SampleVialDecorator {
+        -double VolumeMl = 2
+        -decimal VialPrice = 0.6
+        -IScent _sample
+        +string Description
+        +decimal Cost
+    }
+
+    class LabelPrinter {
+        +Print(IProduct product) void
+    }
+
+    IProduct <|.. Product : implements
+    IProduct <|.. ProductDecorator : implements
+    ProductDecorator o-- "1" IProduct : has-a, wraps
+    ProductDecorator <|-- GiftWrapDecorator : extends
+    ProductDecorator <|-- EngravingDecorator : extends
+    ProductDecorator <|-- SampleVialDecorator : extends
+    LabelPrinter ..> IProduct : uses
+
+    note for IProduct "Component"
+    note for Product "ConcreteComponent"
+    note for ProductDecorator "Decorator"
+    note for GiftWrapDecorator "ConcreteDecorator"
+    note for EngravingDecorator "ConcreteDecorator"
+    note for SampleVialDecorator "ConcreteDecorator"
+    note for LabelPrinter "Client"
+```
+
+#### Code
+
+[FragranceComposer/Decorators/ProductDecorator.cs, lines 4-15](FragranceComposer/Decorators/ProductDecorator.cs#L4-L15)
+
+```csharp
+public abstract class ProductDecorator : IProduct
+{
+    private readonly IProduct _product;
+
+    protected ProductDecorator(IProduct product)
+    {
+        _product = product;
+    }
+
+    public virtual string Description => _product.Description;
+    public virtual decimal Cost => _product.Cost;
+}
+```
+
+[FragranceComposer/Decorators/SampleVialDecorator.cs, lines 5-18](FragranceComposer/Decorators/SampleVialDecorator.cs#L5-L18)
+
+```csharp
+public class SampleVialDecorator : ProductDecorator
+{
+    private const double VolumeMl = 2;
+    private const decimal VialPrice = 0.6m;
+    private readonly IScent _sample;
+
+    public SampleVialDecorator(IProduct product, IScent sample) : base(product)
+    {
+        _sample = sample;
+    }
+
+    public override string Description => base.Description + $" + {VolumeMl} ml sample of {_sample.Name}";
+    public override decimal Cost => base.Cost + (decimal)VolumeMl * _sample.CostPerMl + VialPrice;
+}
+```
+
+`ProductDecorator` keeps the wrapped `IProduct` and by default only passes `Description` and `Cost` to it. `SampleVialDecorator` overrides both, calls `base` to get the result of everything it wraps and then adds its own text and price, and the other two decorators work the same way, which is why they can be stacked in any number and in any order.
+
+#### Unit tests
+
+| Test | What it checks |
+|---|---|
+| `Decorators_StackedInAnyOrder_GiveTheSameCost` | The same three add-ons stacked in two different orders give the same cost, equal to the product cost + 3.50 + 6.00 + (2 ml × cost per ml + 0.60). Both descriptions contain all three add-ons. |
+| `Decorator_AddsItsOwnPriceAndTextToTheWrappedProduct` | One gift wrap adds exactly 3.50 EUR, and the new description starts with the description of the wrapped product and ends with the gift wrap text. |
+| `DecoratedProduct_OverCompositeAndProxy_IsPricedForaACosutumer` | The whole path decorator → `Product` → `LayeredScent` → `ProtectedScent` works for a customer. The gift-wrapped product is priced correctly, while the composition of the layered scent stays hidden. |
+
+```
+$ dotnet test --filter "FullyQualifiedName~DecoratorTests" --logger "console;verbosity=normal"
+  Passed FragranceComposer.Tests.DecoratorTests.Decorator_AddsItsOwnPriceAndTextToTheWrappedProduct [45 ms]
+  Passed FragranceComposer.Tests.DecoratorTests.DecoratedProduct_OverCompositeAndProxy_IsPricedForaACosutumer [14 ms]
+  Passed FragranceComposer.Tests.DecoratorTests.Decorators_StackedInAnyOrder_GiveTheSameCost [2 ms]
+Test Run Successful.
+Total tests: 3
+     Passed: 3
+ Total time: 1.9533 Seconds
+```
+
+The cost is the same in any order because every add-on only adds an amount to the cost of the product it wraps. The description does change with the order, because each decorator appends its text at the end. This is why the first test checks that every add-on is present in the description and does not compare the two descriptions directly.
 
 ---
 
-## 5. Implemented Creational Patterns
+## 5. How the Patterns Work Together
 
-### 5.1 Builder (with Director)
+The three patterns are connected on one execution path. When the client asks a decorated product for its cost, the call goes through the decorators to `Product`, then to the composite `LayeredScent`, then to the proxy `ProtectedScent` and finally to the `Fragrance` objects. The diagram below shows this call for the product from section 7 of `Program.cs`, with the real values.
 
-> *Separate the construction of a complex object from its representation, so that the same
-> construction process can create different representations.*
+```mermaid
+sequenceDiagram
+    participant C as Program
+    participant S as SampleVialDecorator
+    participant E as EngravingDecorator
+    participant G as GiftWrapDecorator
+    participant P as Product
+    participant L as LayeredScent
+    participant X as ProtectedScent
+    participant F1 as Fragrance Maison Secret No. 1
+    participant F2 as Fragrance Black Sea Breeze
 
-**Problem.** In Lab 1, `FragranceService.Create(name, concentration, Dictionary<string, double>)`
-accepted any dictionary. A formula totalling 90 %, or one without a base note, still produced a
-valid-looking `Fragrance`. In Lab 2 the constructor gained a fourth argument (`ScentFamily`), and
-the domain rules involve several arguments at once. The Builder lets the client supply the parts
-one at a time and checks the whole object **once, at the moment it is created**.
-
-| GoF role | Class |
-|---|---|
-| Builder | `FragranceBuilder` |
-| Director | `FragranceDirector` |
-| Product | `Fragrance` |
-| Client | `Program` |
-
-The builder has a fluent interface: every step returns `this`, and `Build()` is the only way to get the
-finished object:
-
-```csharp
-// Builders/FragranceBuilder.cs
-public FragranceBuilder WithName(string name) { _name = name; return this; }
-public FragranceBuilder WithFamily(ScentFamily family) { _family = family; return this; }
-public FragranceBuilder WithConcentration(IConcentration concentration) { _concentration = concentration; return this; }
-
-public FragranceBuilder AddNote(string ingredientName, double percent)
-{
-    if (percent <= 0)
-        throw new ArgumentOutOfRangeException(nameof(percent), "Percent must be positive");
-    _formula[_repository.GetByName(ingredientName)] = percent;
-    return this;
-}
-
-public Fragrance Build()
-{
-    try
-    {
-        Validate();
-        return new Fragrance(_name!, _family!.Value, _concentration!, _formula);
-    }
-    finally
-    {
-        Reset();
-    }
-}
+    C->>S: Cost
+    S->>E: base.Cost
+    E->>G: base.Cost
+    G->>P: base.Cost
+    P->>L: Scent.CostPerMl
+    L->>X: CostPerMl, 2 sprays
+    X->>F1: CostPerMl
+    F1-->>X: 0.4311
+    X-->>L: 0.4311
+    L->>F2: CostPerMl, 1 spray
+    F2-->>L: 0.2448
+    L-->>P: 0.3690
+    P-->>G: 63.90
+    G-->>E: 67.40
+    E-->>S: 73.40
+    S->>X: _sample.CostPerMl
+    X-->>S: 0.4311
+    S-->>C: 74.86
 ```
 
-The rules enforced by the builder:
+The client code builds this structure using only the interfaces `IScent` and `IProduct`.
 
-| Rule | Checked in | Failure |
+[FragranceComposer/Program.cs, lines 115-119 and 142-149](FragranceComposer/Program.cs#L115-L149)
+
+```csharp
+var session = new UserSession();
+IScent secret = new ProtectedScent(registry.Get("vanilla-night").CloneAs("Maison Secret No. 1"), session);
+IScent secretEvening = new LayeredScent("Secret Evening")
+.Add(secret, 2)
+.Add(seaBreeze, 1);
+// ...
+session.SignIn(UserRole.Customer);
+IProduct plain = new Product(luxury.LineName, secretEvening, luxury.CreateBottle(), luxury.CreatePackaging());
+printer.Print(plain);
+
+IProduct gift = new GiftWrapDecorator(plain);
+gift = new EngravingDecorator(gift, "For Ana");
+gift = new SampleVialDecorator(gift, secret);
+printer.Print(gift);
+```
+
+Each object on the path knows only the interface of the next one. The decorators know `IProduct`, `Product` knows `IScent`, and `LayeredScent` knows `IScent` again for its layers. Because of this, the proxy can sit inside the composite and the composite can sit inside a decorated product without any of these classes knowing about each other. A new add-on, a new kind of scent or a new access rule is added as a new class, and the existing ones stay the same.
+
+The creational patterns from Lab 2 are reused on the same path. `FragranceDirector` builds Black Sea Breeze and Vanilla Night, `FragranceRegistry` returns the clone of Vanilla Night that becomes Maison Secret No. 1, and `LuxuryLineFactory` supplies the crystal bottle and the gift box of the product. The table below shows how the earlier labs were affected.
+
+| Element from Lab 1 or 2 | Status in Lab 3 | Reason |
 |---|---|---|
-| ingredient exists in the catalogue | `AddNote` (via repository) | `ArgumentException: Unknown ingredient: …` |
-| percentage is positive | `AddNote` | `ArgumentOutOfRangeException` |
-| name is not empty | `Validate` | `Fragrance name is required` |
-| scent family is set | `Validate` | `Scent family is required` |
-| concentration is set | `Validate` | `Concentration is required` |
-| percentages total 100 % (± 0.01) | `Validate` | `Formula must total 100%, got X%` |
-| top, heart **and** base notes are all present | `Validate` | `Formula is missing a {layer} note` |
-
-**The Director** stores the recipes that the perfume house produces repeatedly. The concentration is
-a **parameter**, not part of the recipe — the same Aquatic accord can be produced as Parfum, Eau de
-Parfum or Eau de Toilette. The Abstract Factory relies on exactly this in §5.2:
-
-```csharp
-// Builders/FragranceDirector.cs
-public Fragrance BuildAquatic(string name, IConcentration concentration) =>
-    _builder.WithName(name)
-            .WithFamily(ScentFamily.Aquatic)
-            .WithConcentration(concentration)
-            .AddNote("Sea Notes", 20)
-            .AddNote("Bergamot", 15)
-            .AddNote("Lavender", 25)
-            .AddNote("Musk", 25)
-            .AddNote("Ambroxan", 15)
-            .Build();
-```
-
-The client can also skip the Director and use the builder directly for a one-off fragrance:
-
-```csharp
-// Program.cs
-var summer = builder
-    .WithName("Moldavian Summer")
-    .WithFamily(ScentFamily.Floral)
-    .WithConcentration(new EauDeParfum())
-    .AddNote("Bergamot", 25)
-    .AddNote("Rose", 40)
-    .AddNote("Vanilla", 35)
-    .Build();
-```
-
-**Design decisions:**
-
-- **`Build()` always resets, in a `finally` block.** One builder instance is shared by `Program` and
-  the `FragranceDirector`. Scenario 3 (*"Broken"*) fails validation. Without the `finally`, its
-  Lemon and Musk would still be in `_formula` when the Director builds *"Vanilla Night"* next, and that
-  correct recipe would fail too.
-- **`Reset()` assigns a new dictionary instead of calling `Clear()`.** The finished `Fragrance` keeps
-  the dictionary it was built with, and the builder never touches that dictionary again. Clearing it would empty the
-  formula of the fragrance that was just returned.
-- **Name resolution goes through `IIngredientRepository`**, so the builder keeps the Dependency
-  Inversion from Lab 1. It depends on the abstraction, exactly as `FragranceService` did.
-- **No abstract `IFragranceBuilder`.** GoF allows several builders producing different
-  representations, but this domain has a single representation (`Fragrance`). An interface with
-  one implementation and no planned second one would add complexity and no benefit, which is the
-  same reasoning Lab 1 used for `Ingredient` and `Fragrance`.
-
-### 5.2 Abstract Factory
-
-> *Provide an interface for creating families of related or dependent objects without specifying
-> their concrete classes.*
-
-**Problem.** A product line fixes three parts that must match. Mixing them, for example Parfum in
-a pouch or a 10 ml travel spray in a gift box, is a real business error. If clients called
-`new CrystalBottle()` themselves, nothing would prevent it, and every client would need to know
-every concrete component.
-
-The product families implemented:
-
-| Product line | Concentration (`IConcentration`) | Bottle (`IBottle`) | Packaging (`IPackaging`) |
-|---|---|---|---|
-| **Luxury** | `Parfum` — 25 % oil | `CrystalBottle` — 100 ml, 18.00 € | `GiftBox` — 9.00 € |
-| **Classic** | `EauDeParfum` — 18 % oil | `GlassBottle` — 50 ml, 4.00 € | `CardboardBox` — 1.20 € |
-| **Travel** | `EauDeToilette` — 10 % oil | `TravelSprayBottle` — 10 ml, 1.50 € | `Pouch` — 0.50 € |
-
-| GoF role | Class |
-|---|---|
-| AbstractFactory | `IProductLineFactory` |
-| ConcreteFactory | `LuxuryLineFactory`, `ClassicLineFactory`, `TravelLineFactory` |
-| AbstractProduct | `IConcentration`, `IBottle`, `IPackaging` |
-| ConcreteProduct | `Parfum`, `EauDeParfum`, `EauDeToilette`, `CrystalBottle`, `GlassBottle`, `TravelSprayBottle`, `GiftBox`, `CardboardBox`, `Pouch` |
-| Client | `Program` |
-
-```csharp
-// Factories/IProductLineFactory.cs
-public interface IProductLineFactory
-{
-    string LineName { get; }
-    IConcentration CreateConcentration();
-    IBottle CreateBottle();
-    IPackaging CreatePackaging();
-}
-
-// Factories/LuxuryLineFactory.cs
-public class LuxuryLineFactory : IProductLineFactory
-{
-    public string LineName => "Luxury";
-    public IConcentration CreateConcentration() => new Parfum();
-    public IBottle CreateBottle() => new CrystalBottle();
-    public IPackaging CreatePackaging() => new GiftBox();
-}
-```
-
-The client works only with `IProductLineFactory`. The loop below releases the same recipe in all
-three lines without naming a single concrete bottle, box or concentration:
-
-```csharp
-// Program.cs
-IProductLineFactory[] lines =
-{
-    new LuxuryLineFactory(),
-    new ClassicLineFactory(),
-    new TravelLineFactory()
-};
-
-foreach (var line in lines)
-{
-    var fragrance = director.BuildAquatic("Black Sea Breeze", line.CreateConcentration());
-    var product = new Product(line.LineName, fragrance, line.CreateBottle(), line.CreatePackaging());
-    printer.Print(product);
-    Console.WriteLine($"Total cost: {costCalculator.Calculate(product):F2} EUR\n");
-}
-```
-
-The cost of a finished product is calculated by **composing** the Lab 1 calculator rather than
-modifying it:
-
-```csharp
-// Services/ProductCostCalculator.cs
-public decimal Calculate(Product product) =>
-    _oilCalculator.Calculate(product.Fragrance, product.Bottle.VolumeMl)
-    + product.Bottle.Price
-    + product.Packaging.Price;
-```
-
-**Design decisions:**
-
-- **The factory does not create the fragrance itself.** The scent does not depend on the line: the same
-  *"Black Sea Breeze"* recipe goes into all three products. The factory supplies only the parts that
-  must match *each other*, and the Director supplies the scent. Merging them would give one
-  factory per (line × recipe) pair.
-- **`IConcentration` from Lab 1 became an abstract product with no changes.** The Lab 1 report
-  predicted that a 25 % concentration could be added as a new class without editing
-  `CostCalculator`, `LabelPrinter` or `Fragrance`. Lab 2 added `Parfum` exactly that way, which
-  confirms the Open/Closed design.
-- **Trade-off.** Adding a new *line* (a row of the table above, e.g. a *Sample* line) means adding
-  one factory class, with no edits to existing code. Adding a new *kind of part* (a column, e.g. an
-  `IAtomizer`) means editing the interface and every factory. This is the known weakness of Abstract
-  Factory. It is acceptable here because a perfume house launches new lines far more often than it
-  changes what a bottle of perfume consists of.
-
-### 5.3 Prototype (with registry)
-
-> *Specify the kinds of objects to create using a prototypical instance, and create new objects by
-> copying this prototype.*
-
-**Problem.** A flanker is defined as *"the same fragrance, with a different name and/or
-concentration"*. Building it again with the Builder would repeat every note of the recipe and run
-the validation again on a formula that was already approved. Copying fields by hand at each call
-site risks sharing the formula dictionary between the original and the copy. With Prototype, the
-object knows how to copy itself correctly.
-
-| GoF role | Class |
-|---|---|
-| Prototype | `IPrototype<T>` |
-| ConcretePrototype | `Fragrance` |
-| Prototype registry (manager) | `FragranceRegistry` |
-| Client | `Program` |
-
-```csharp
-// Interfaces/IPrototype.cs
-public interface IPrototype<T>
-{
-    T Clone();
-}
-
-// Models/Fragrance.cs
-public class Fragrance : IPrototype<Fragrance>
-{
-    // … properties and constructor …
-
-    public Fragrance Clone() => CloneAs(Name);
-
-    public Fragrance CloneAs(string name, IConcentration? concentration = null) =>
-        new Fragrance(name, Family, concentration ?? Concentration,
-                      new Dictionary<Ingredient, double>(Formula));
-}
-```
-
-`Clone()` is the plain GoF operation. `CloneAs()` is the operation the domain actually needs: copy
-everything, then change the name and, optionally, the concentration.
-
-**Copy depth was decided field by field**, depending on whether the field can change:
-
-| Field | How it is copied | Why |
-|---|---|---|
-| `Name` | kept or replaced | `string` is immutable |
-| `Family` | copied by value | `enum` |
-| `Concentration` | shared or replaced | concentration objects are stateless |
-| `Formula` | **new `Dictionary`** | the only collection in the object, and the clone must not share it |
-| `Ingredient` keys | shared references | ingredients are immutable catalogue entries. Since `Ingredient` uses reference equality as a dictionary key, copying them would also break the link with the repository |
-
-As part of the same change, `Fragrance.Formula` was changed from `Dictionary` to
-`IReadOnlyDictionary`, so code outside the class cannot modify a formula through the property.
-
-The registry keeps the approved originals and **never returns them**. It always returns a copy:
-
-```csharp
-// Prototypes/FragranceRegistry.cs
-public class FragranceRegistry
-{
-    private readonly Dictionary<string, Fragrance> _prototype = new();
-
-    public void Register(string key, Fragrance prototype) => _prototype[key] = prototype;
-
-    public Fragrance Get(string key) =>
-        _prototype.TryGetValue(key, out var prototype)
-            ? prototype.Clone()
-            : throw new ArgumentException($"Unknown prototype: {key}");
-}
-```
-
-```csharp
-// Program.cs — the independence of the copy is checked explicitly
-var summerCopy = registry.Get("summer");
-Console.WriteLine($"Same object as original? {ReferenceEquals(summer, summerCopy)}");            // False
-Console.WriteLine($"Same formula instance? {ReferenceEquals(summer.Formula, summerCopy.Formula)}"); // False
-
-var summerIntense = registry.Get("summer").CloneAs("Moldavian Summer Intense", new Parfum());
-```
-
-### 5.4 The patterns working together
-
-The patterns are not three separate demos. Each one answers a different question about creating an
-object, so they combine without overlapping. Scenario 5 uses all of them in one chain:
-
-```csharp
-// Program.cs
-registry.Register("vanilla-night",
-    director.BuildGourmand("Vanilla Night", new EauDeParfum()));     // Builder + Director
-
-var luxury = new LuxuryLineFactory();
-var extrait = registry.Get("vanilla-night")                           // Prototype
-                      .CloneAs("Vanilla Night Extrait",
-                               luxury.CreateConcentration());         // Abstract Factory
-var extraitProduct = new Product(luxury.LineName, extrait,
-                                 luxury.CreateBottle(), luxury.CreatePackaging());
-```
-
-| Question | Pattern | Answer in this project |
-|---|---|---|
-| *How* is a complex object assembled correctly? | Builder | note by note, validated once in `Build()` |
-| *Which* objects belong together? | Abstract Factory | one factory per product line |
-| *From what* is a new object derived? | Prototype | from an approved original in the registry |
-
-### 5.5 Impact on the Lab 1 design
-
-| Lab 1 element | Status in Lab 2 | Reason |
-|---|---|---|
-| `IConcentration`, `EauDeParfum`, `EauDeToilette` | unchanged | reused as products of the Abstract Factory, `Parfum` added next to them |
-| `CostCalculator` | unchanged | wrapped by `ProductCostCalculator` (composition instead of modification) |
-| `IIngredientRepository`, `Ingredient` | unchanged | the builder depends on the abstraction, as the old service did |
-| `InMemoryIngredientRepository` | data extended | 4 → 10 ingredients, needed by the new recipes |
-| `Fragrance` | changed | + `Family`; `Formula` became `IReadOnlyDictionary`; implements `IPrototype<Fragrance>` |
-| `LabelPrinter` | extended | scent family in the header; new `Print(Product)` overload |
-| `FragranceService` | **removed** | its responsibility moved into `FragranceBuilder`, which also validates |
-
-The SOLID properties from Lab 1 still hold. Every new creational class has a single responsibility.
-Product lines and concentrations grow by adding classes. The high-level code still depends on
-`IIngredientRepository`, `IConcentration`, `IBottle` and `IPackaging`, not on their implementations.
+| `FragranceBuilder`, `FragranceDirector` | unchanged, reused | build the leaf fragrances |
+| `FragranceRegistry`, `Fragrance.CloneAs` | unchanged, reused | Maison Secret No. 1 is a clone of Vanilla Night |
+| `IProductLineFactory` and the line factories | unchanged, reused | supply the bottle and packaging of the decorated product |
+| `Fragrance` | changed | implements `IScent`, adds `Composition` and `CostPerMl`. It is still immutable |
+| `Product` | changed | holds an `IScent` instead of a `Fragrance` and implements `IProduct` |
+| `LabelPrinter` | changed | `Print(Product)` became `Print(IProduct)`, so it also prints decorated products |
+| `CostCalculator`, `ProductCostCalculator` | removed | they accepted only a `Fragrance`. The formula moved to `IScent.CostPerMl` and `Product.Cost` |
 
 ---
 
 ## 6. Results
 
-Build and run:
+### 6.1 Program output
 
 ```bash
 dotnet run --project FragranceComposer
 ```
 
-Actual program output:
+The first part of the output comes from the Lab 2 scenarios. It prints the same totals as in the Lab 2 report, so only the new sections 5, 6 and 7 are shown here.
 
 ```
-===Moldavian Summer(Eau de Parfum,Floral)===
-Top note: Bergamot 25%
-Heart note: Rose 40%
-Base note: Vanilla 35%
+--- Composite ---
+=== Black Sea Breeze ===
+Top note: Sea Notes 20.0%
+Top note: Bergamot 15.0%
+Heart note: Lavender 25.0%
+Base note: Musk 25.0%
+Base note: Ambroxan 15.0%
+Composition total: 100.0%
+Cost per ml: 0.2448 EUR
 
-[Luxury line]
-===Black Sea Breeze(Parfum,Aquatic)===
-Top note: Sea Notes 20%
-Top note: Bergamot 15%
-Heart note: Lavender 25%
-Base note: Musk 25%
-Base note: Ambroxan 15%
-Bottle: Crystal bottle (100 ml)
-Packaging: Gift box
-Total cost: 61.00 EUR
+=== Beach Evening ===
+Top note: Bergamot 15.0%
+Top note: Sea Notes 13.3%
+Heart note: Lavender 16.7%
+Heart note: Jasmine 8.3%
+Base note: Musk 16.7%
+Base note: Vanilla 13.3%
+Base note: Ambroxan 10.0%
+Base note: Sandalwood 6.7%
+Composition total: 100.0%
+Cost per ml: 0.3069 EUR
 
-[Classic line]
-===Black Sea Breeze(Eau de Parfum,Aquatic)===
-Top note: Sea Notes 20%
-Top note: Bergamot 15%
-Heart note: Lavender 25%
-Base note: Musk 25%
-Base note: Ambroxan 15%
-Bottle: Glass bottle (50 ml)
-Packaging: Cardboard box
-Total cost: 17.44 EUR
+=== Weekend Ritual ===
+Top note: Bergamot 17.5%
+Top note: Sea Notes 10.0%
+Heart note: Lavender 12.5%
+Heart note: Rose 10.0%
+Heart note: Jasmine 6.2%
+Base note: Vanilla 18.8%
+Base note: Musk 12.5%
+Base note: Ambroxan 7.5%
+Base note: Sandalwood 5.0%
+Composition total: 100.0%
+Cost per ml: 0.3427 EUR
 
-[Travel line]
-===Black Sea Breeze(Eau de Toilette,Aquatic)===
-Top note: Sea Notes 20%
-Top note: Bergamot 15%
-Heart note: Lavender 25%
-Base note: Musk 25%
-Base note: Ambroxan 15%
-Bottle: Travel spray bottle (10 ml)
-Packaging: Pouch
-Total cost: 3.36 EUR
+--- Proxy ---
+[signed in as Customer]
+Maison Secret No. 1 costs 0.4311 EUR per ml
+=== Maison Secret No. 1 ===
+ACCESS DENIED: The formula of 'Maison Secret No. 1' is secret; Customer cannot read it
 
-BUILD REJECTED: Formula must total 100%, got 90%
+Secret Evening costs 0.3690 EUR per ml
+=== Secret Evening ===
+ACCESS DENIED: The formula of 'Maison Secret No. 1' is secret; Customer cannot read it
 
---- Prototype ---
-Same object as original? False
-Same formula instance? False
-===Moldavian Summer Intense(Parfum,Floral)===
-Top note: Bergamot 25%
-Heart note: Rose 40%
-Base note: Vanilla 35%
-Original unchanged: Moldavian Summer (Eau de Parfum)
+[signed in as Perfumer]
+Maison Secret No. 1 costs 0.4311 EUR per ml
+=== Maison Secret No. 1 ===
+Top note: Bergamot 15.0%
+Heart note: Jasmine 25.0%
+Base note: Vanilla 40.0%
+Base note: Sandalwood 20.0%
+Composition total: 100.0%
+Cost per ml: 0.4311 EUR
 
-[Luxury line]
-===Vanilla Night Extrait(Parfum,Gourmand)===
-Top note: Bergamot 15%
-Heart note: Jasmine 25%
-Base note: Vanilla 40%
-Base note: Sandalwood 20%
-Bottle: Crystal bottle (100 ml)
-Packaging: Gift box
-Total cost: 86.88 EUR
+Secret Evening costs 0.3690 EUR per ml
+=== Secret Evening ===
+Top note: Bergamot 15.0%
+Top note: Sea Notes 6.7%
+Heart note: Jasmine 16.7%
+Heart note: Lavender 8.3%
+Base note: Vanilla 26.7%
+Base note: Sandalwood 13.3%
+Base note: Musk 8.3%
+Base note: Ambroxan 5.0%
+Composition total: 100.0%
+Cost per ml: 0.3690 EUR
+
+--- Decorator ---
+Product: Secret Evening [Luxury line]: Crystal bottle (100 ml), Gift box
+Total cost: 63.90 EUR
+Product: Secret Evening [Luxury line]: Crystal bottle (100 ml), Gift box +gift wrap + engraving "For Ana" + 2 ml sample of Maison Secret No. 1
+Total cost: 74.86 EUR
+Product: Secret Evening [Luxury line]: Crystal bottle (100 ml), Gift box + 2 ml sample of Maison Secret No. 1 + engraving "For Ana" +gift wrap
+Total cost: 74.86 EUR
+Same cost in any order? True
 ```
 
-What each part of the output demonstrates:
-
-| Output | Pattern | Shows that… |
+| Output | Pattern | What it shows |
 |---|---|---|
-| *Moldavian Summer* label | Builder | a fragrance built step by step passes validation |
-| three *Black Sea Breeze* products | Abstract Factory + Director | one recipe, three lines, and each line gets its own matching concentration, bottle and packaging |
-| `BUILD REJECTED: … got 90%` | Builder | an invalid formula is never turned into an object. (It is also missing a heart note, but the 100 % check runs first.) |
-| `Same object… False`, `Same formula instance? False` | Prototype | the registry returns a new object with its own formula collection |
-| `Original unchanged: … (Eau de Parfum)` | Prototype | cloning a variant with Parfum does not affect the registered original |
-| *Vanilla Night Extrait* product | all three | the patterns compose in one chain |
+| Black Sea Breeze, Beach Evening and Weekend Ritual printed by the same `ScentPrinter` | Composite | A fragrance, a layered scent and a layered scent inside another one go through the same `IScent` code, and every composition totals 100% |
+| Bergamot 15.0% in Beach Evening | Composite | Bergamot from both layers is merged into one entry |
+| ACCESS DENIED for the customer, the full formula for the perfumer | Proxy | Only the composition is blocked. The cost per ml is the same for both roles |
+| ACCESS DENIED for Secret Evening | Proxy and Composite | A layered scent that contains the secret cannot be used to read it |
+| 63.90 EUR, then 74.86 EUR for both orders | Decorator | Add-ons in two different orders give the same total, while the description follows the order of wrapping |
 
-Verification of the computed costs — reproducible by hand. Cost of 1 ml of the *Black Sea Breeze*
-oil blend:
+### 6.2 Checking the price by hand
 
-| Ingredient | Share | Price | Contribution |
-|---|---|---|---|
-| Sea Notes | 20 % | 1.20 €/ml | 0.240 € |
-| Bergamot | 15 % | 0.80 €/ml | 0.120 € |
-| Lavender | 25 % | 1.00 €/ml | 0.250 € |
-| Musk | 25 % | 1.50 €/ml | 0.375 € |
-| Ambroxan | 15 % | 2.50 €/ml | 0.375 € |
-| **Blend** | 100 % | | **1.360 €/ml** |
+Maison Secret No. 1 is a clone of Vanilla Night in Eau de Parfum. Its oil blend costs 15% × 0.80 + 25% × 3.50 + 40% × 2.00 + 20% × 3.00 = 2.395 EUR per ml of oil, and with 18% oil this gives 0.4311 EUR per ml of perfume. Black Sea Breeze in Eau de Parfum costs 18% × 1.36 = 0.2448 EUR per ml. The decorated product is then calculated step by step.
 
-| Line | Bottle | Oil fraction | Oil volume | Oil cost | Bottle | Packaging | **Total** |
-|---|---|---|---|---|---|---|---|
-| Luxury | 100 ml | 25 % | 25 ml | 34.00 € | 18.00 € | 9.00 € | **61.00 €** |
-| Classic | 50 ml | 18 % | 9 ml | 12.24 € | 4.00 € | 1.20 € | **17.44 €** |
-| Travel | 10 ml | 10 % | 1 ml | 1.36 € | 1.50 € | 0.50 € | **3.36 €** |
+| Step | Calculation | Result |
+|---|---|---|
+| Secret Evening, 2 sprays + 1 spray | (2 × 0.4311 + 1 × 0.2448) / 3 | 0.3690 EUR/ml |
+| Product in the Luxury line | 100 ml × 0.3690 + 18.00 bottle + 9.00 gift box | 63.90 EUR |
+| + gift wrap | 63.90 + 3.50 | 67.40 EUR |
+| + engraving | 67.40 + 6.00 | 73.40 EUR |
+| + sample vial | 73.40 + 2 ml × 0.4311 + 0.60 | 74.86 EUR |
 
-*Vanilla Night Extrait* (Luxury): blend = Bergamot 15 % × 0.80 + Jasmine 25 % × 3.50 + Vanilla
-40 % × 2.00 + Sandalwood 20 % × 3.00 = **2.395 €/ml**. 25 ml × 2.395 = 59.875 €, + 18.00 € bottle
-+ 9.00 € gift box = 86.875 €, printed as **86.88 €** after rounding to two decimals.
+### 6.3 All unit tests
+
+```
+$ dotnet test --logger "console;verbosity=normal"
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.01] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.15)
+[xUnit.net 00:00:00.22]   Discovering: FragranceComposer.Tests
+[xUnit.net 00:00:00.33]   Discovered:  FragranceComposer.Tests
+[xUnit.net 00:00:00.39]   Starting:    FragranceComposer.Tests
+  Passed FragranceComposer.Tests.ProxyTests.Customer_CanReadNameAndCost_ButNotComposition [54 ms]
+  Passed FragranceComposer.Tests.DecoratorTests.Decorator_AddsItsOwnPriceAndTextToTheWrappedProduct [53 ms]
+  Passed FragranceComposer.Tests.CompositeTests.Composite_WeightsCompositionAndCostBySprays [50 ms]
+  Passed FragranceComposer.Tests.ProxyTests.CompositeContainingProxy_HidesCompositionButStillGivesCost [1 ms]
+  Passed FragranceComposer.Tests.CompositeTests.EmptyComposite_Throws [1 ms]
+  Passed FragranceComposer.Tests.DecoratorTests.DecoratedProduct_OverCompositeAndProxy_IsPricedForaACosutumer [1 ms]
+  Passed FragranceComposer.Tests.ProxyTests.Perfumer_GetsTheRealCompositionUnchanged [< 1 ms]
+  Passed FragranceComposer.Tests.CompositeTests.LeafAndComposite_AreUsedThroughTheSameInterface [< 1 ms]
+[xUnit.net 00:00:00.68]   Finished:    FragranceComposer.Tests
+  Passed FragranceComposer.Tests.CompositeTests.Composite_CanContainAnotherComposite [< 1 ms]
+  Passed FragranceComposer.Tests.DecoratorTests.Decorators_StackedInAnyOrder_GiveTheSameCost [3 ms]
+
+Test Run Successful.
+Total tests: 10
+     Passed: 10
+ Total time: 2.0465 Seconds
+```
+
+All 10 tests pass. A plain `dotnet test` runs the same tests. The logger option only makes the output list every test by name.
 
 ---
 
 ## 7. Conclusions
 
-The laboratory work extends the Lab 1 application with three creational patterns, each chosen
-because the domain had a concrete instantiation problem that a plain constructor call could not
-solve well:
+In this laboratory work I added three structural patterns to FragranceComposer. Composite lets a layered scent be used in the same way as a single fragrance, even when one layered scent is inside another. Proxy hides the formula of a secret fragrance from customers, while the name and the price stay available to everyone. Decorator adds gift wrap, an engraving and a sample vial to a product in any order and any combination. All three patterns work on one execution path, and the creational patterns from Lab 2 still build the fragrances and supply the bottles and packaging.
 
-- **Builder** made object creation a validated process. A `Fragrance` whose formula does not total
-  100 % or lacks a note layer is rejected in `Build()` and never reaches the rest of the program. The
-  `Director` captures the house recipes once and leaves the concentration open. The `finally`-based
-  reset makes one builder instance safe to reuse after a failed build.
-- **Abstract Factory** guarantees that the parts of a product match. The client releases the same
-  fragrance in three lines without naming a concrete bottle, box or concentration, and adding a fourth
-  line requires one new class. The `IConcentration` abstraction from Lab 1 became one of the factory's
-  products without any change, and `Parfum` was added purely by addition.
-- **Prototype** made variants cheap and safe. A flanker is one `CloneAs` call on an approved original
-  from the registry, and the output confirms that the copy is a different object with its own formula
-  and that the original is untouched.
+The part that was harder than I expected was the cost calculation. In Lab 2 the cost was calculated by `CostCalculator` and `ProductCostCalculator`, and both of them took a `Fragrance` as a parameter. When `Product` started to hold an `IScent`, these classes could not price a layered scent anymore. I moved the formula into `IScent.CostPerMl` and `Product.Cost` and removed the two calculators, which goes against the Open/Closed idea from Lab 1 of extending code instead of editing it. The Lab 2 products still cost 61.00, 17.44, 3.36 and 86.88 EUR, so the move did not change any result.
 
-The main lesson of the work is that creational patterns are about *who decides how an object comes
-into existence*. Each pattern took that decision away from the client for one specific reason:
-correctness (Builder), consistency between related objects (Abstract Factory), and reuse of an
-approved object (Prototype). Because they answer different questions, they combine naturally, and
-the final scenario uses all three in a single expression.
+I also struggled with the weighted composition of nested layers. A note inside an inner layered scent has to be multiplied by its share at every level, and an ingredient that is present in two layers has to stay one entry. The test with a layered scent inside another one, where the aquatic share is 1/2 × 1/2 + 1/2 = 3/4, was the clearest way to check that the numbers are right. Another result of this design is that the proxy also protects every layered scent that contains the secret. Without it, a customer could read the layered composition, subtract the public formula of the second fragrance and get the secret one back.
 
-Two more observations connect this work with Lab 1. First, the Prototype was cheap to implement
-because the Lab 1 model objects were already immutable. Only the formula collection had to be
-copied, while ingredients and concentrations could safely be shared, so an earlier design decision
-directly reduced the cost of a later pattern. Second, as in Lab 1, part of the work was deciding
-where *not* to add an abstraction. There is no abstract builder, because there is only one product
-representation. There is no factory for the fragrance itself, because the scent does not depend on
-the product line. Each pattern was applied only where the domain actually varies.
+If I designed this again, I would change two things. First, `LayeredScent` can still be changed with `Add` after it is created, while `Fragrance` and `Ingredient` are immutable. A product that holds a layered scent could change its price if someone adds a layer later, and nothing stops a layered scent from containing itself, which would end in a `StackOverflowException`. Taking the layers once, through the constructor or a small builder like `FragranceBuilder`, would solve both problems. Second, `ScentPrinter` prints the name of a scent before it reads the composition, so the output shows a header right before ACCESS DENIED. Reading the composition first and printing only after that would give a cleaner result.
+
+Overall, each pattern comes from a real situation in a perfume shop. Layering needs Composite, a secret formula needs Proxy and gift options need Decorator. Every class on the execution path depends only on `IProduct` or `IScent`, which is why the three patterns could be combined without changing each other.
