@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using FragranceComposer.Interfaces;
 namespace FragranceComposer.Models;
 
