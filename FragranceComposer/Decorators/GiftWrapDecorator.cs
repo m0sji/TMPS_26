@@ -9,6 +9,6 @@ public class GiftWrapDecorator : ProductDecorator
     {
     }
 
-    public override string Description => base.Description + " +gift wrap";
+    public override string Description => base.Description + " + gift wrap";
     public override decimal Cost => base.Cost + Price;
 }

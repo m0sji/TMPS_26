@@ -51,7 +51,7 @@ public class DecoratorTests
     }
 
     [Fact]
-    public void DecoratedProduct_OverCompositeAndProxy_IsPricedForaACosutumer()
+    public void DecoratedProduct_OverCompositeAndProxy_IsPricedForACosutumer()
     {
         var session = new UserSession();
         IScent secret = new ProtectedScent(_scent, session);
