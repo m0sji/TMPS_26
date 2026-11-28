@@ -152,6 +152,36 @@ IProduct otherOrder =new GiftWrapDecorator(new EngravingDecorator(new SampleVial
 printer.Print(otherOrder);
 Console.WriteLine($"Same cost in any order? {gift.Cost == otherOrder.Cost}");
 
+//8.State: a production order moves through its lifecycle, and forbidden steps are rejected
+Console.WriteLine("\n--- State ---");
+var batch = new Product(classic.LineName, beachEvening, classic.CreateBottle(), classic.CreatePackaging());
+var order = new ProductionOrder("PO-001", batch, 50);
+Console.WriteLine($"{order.Id}: {order.Quantity} x {batch.Description} [{order.StateName}]");
+
+void Try(ProductionOrder o, string action, Action step)
+        {
+            try
+            {
+                step();
+                Console.WriteLine($"{o.Id} {action} -> {o.StateName}");
+            }
+            catch(InvalidOperationException ex)
+            {
+                Console.WriteLine($"{o.Id} {action} REJECTED: {ex.Message}");
+            }
+        }
+Try(order, "ship", order.Ship);
+Try(order, "approve", order.Approve);
+Try(order, "start maceration", order.StartMaceration);
+Try(order, "cancel", order.Cancel);
+Try(order, "bottle", order.Bottle);
+Try(order, "ship", order.Ship);
+Try(order, "approve", order.Approve);
+
+var smallOrder = new ProductionOrder("PO-002", batch, 20);
+Try(smallOrder, "cancel", smallOrder.Cancel);
+Try(smallOrder, "approve", smallOrder.Approve);
+
 
 
     }
