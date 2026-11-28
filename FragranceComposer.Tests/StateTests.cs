@@ -3,12 +3,16 @@ using FragranceComposer.Builders;
 using FragranceComposer.Factories;
 using FragranceComposer.Models;
 using FragranceComposer.Repositories;
+using FragranceComposer.Approvals;
+using System.Net.Http.Headers;
 
 namespace FragranceComposer.Tests;
 
 public class StateTests
 {
     private readonly Product _product;
+
+    private readonly IApprovalHandler _approveAll =new CostApprovalHandler("Test approver", decimal.MaxValue);
 
     public StateTests()
     {
@@ -21,7 +25,7 @@ public class StateTests
     [Fact]
     public void ValidTransitions_FollowTheLifecycleUntilShipped()
     {
-        var order = new ProductionOrder("PO-1", _product, 10);
+        var order = new ProductionOrder("PO-1", _product, 10, _approveAll);
         Assert.Equal("Draft", order.StateName);
         order.Approve();
         Assert.Equal("Approved", order.StateName);
@@ -36,7 +40,7 @@ public class StateTests
     [Fact]
     public void ForbiddenTransition_IsRejected_AndStateDoesNotChange()
     {
-        var order = new ProductionOrder("PO-1", _product, 10);
+        var order = new ProductionOrder("PO-1", _product, 10, _approveAll);
         Assert.Throws<InvalidOperationException>(() => order.Ship());
         Assert.Equal("Draft", order.StateName);
 
@@ -49,7 +53,7 @@ public class StateTests
     [Fact]
     public void CancelledOrder_RejectsEveryAction()
     {
-        var order = new ProductionOrder("PO-1", _product, 10);
+        var order = new ProductionOrder("PO-1", _product, 10, _approveAll);
         order.Cancel();
         Assert.Equal("Cancelled", order.StateName);
 
