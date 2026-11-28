@@ -9,6 +9,9 @@ using FragranceComposer.Prototypes;
 using FragranceComposer.Composites;
 using FragranceComposer.Proxies;
 using FragranceComposer.Decorators;
+using FragranceComposer.Approvals;
+using FragranceComposer.Observers;
+using FragranceComposer.Client;
 
 namespace FragranceComposer;
 
@@ -16,6 +19,13 @@ class Program
 {
     static void Main(string[] args)
     {
+
+        if(args.Contains("--interactive"))
+        {
+            new InteractiveMode().Run();
+            return;
+        }
+        
        IIngredientRepository repository = new InMemoryIngredientRepository();
        var builder = new FragranceBuilder(repository);
        var director = new FragranceDirector(builder);
@@ -152,6 +162,91 @@ IProduct otherOrder =new GiftWrapDecorator(new EngravingDecorator(new SampleVial
 printer.Print(otherOrder);
 Console.WriteLine($"Same cost in any order? {gift.Cost == otherOrder.Cost}");
 
+//Aproval chain for the production order in section 8 and 9, built by the client
+IBottleInventory bottleInventory = new InMemoryBottleInventory();
+IApprovalHandler approvalChain = new SafetyLimitHandler(new Dictionary<string, double>
+{
+    ["Jasmine"] = 20,
+    ["Rose"] = 30
+});
+approvalChain
+.SetNext(new BottleStockHandler(bottleInventory))
+.SetNext(new CostApprovalHandler("Perfumer", 500m))
+.SetNext(new CostApprovalHandler("Lab manager", 1200m))
+.SetNext(new CostApprovalHandler("Director", 2000m));
+
+//8.State: a production order moves through its lifecycle, and forbidden steps are rejected
+Console.WriteLine("\n--- State ---");
+var batch = new Product(classic.LineName, beachEvening, classic.CreateBottle(), classic.CreatePackaging());
+var order = new ProductionOrder("PO-001", batch, 50, approvalChain);
+Console.WriteLine($"{order.Id}: {order.Quantity} x {batch.Description} [{order.StateName}]");
+
+void Try(ProductionOrder o, string action, Action step)
+        {
+            try
+            {
+                step();
+                Console.WriteLine($"{o.Id} {action} -> {o.StateName}");
+            }
+            catch(InvalidOperationException ex)
+            {
+                Console.WriteLine($"{o.Id} {action} REJECTED: {ex.Message}");
+            }
+        }
+Try(order, "ship", order.Ship);
+Try(order, "approve", order.Approve);
+Try(order, "start maceration", order.StartMaceration);
+Try(order, "cancel", order.Cancel);
+Try(order, "bottle", order.Bottle);
+Try(order, "ship", order.Ship);
+Try(order, "approve", order.Approve);
+
+var smallOrder = new ProductionOrder("PO-002", batch, 20, approvalChain);
+Try(smallOrder, "cancel", smallOrder.Cancel);
+Try(smallOrder, "approve", smallOrder.Approve);
+
+//9. Chain of Responsability : approving a draft sends it through the chain; the first handler that decides ends the request
+Console.WriteLine("\n--- Chain of Responsibility ---");
+var luxuryBatch = new Product(luxury.LineName, weekendRitual, luxury.CreateBottle(), luxury.CreatePackaging());
+ProductionOrder[] drafts =
+        {
+            new("PO-003", batch, 20, approvalChain),
+            new("PO-004", batch, 50, approvalChain),
+            new("PO-005", batch, 110, approvalChain),
+            new("PO-006", extraitProduct, 10, approvalChain),
+            new("PO-007", luxuryBatch, 40, approvalChain),
+            new("PO-008", luxuryBatch, 25, approvalChain)
+        };
+
+        foreach (var draft in drafts)
+        {
+            Console.WriteLine($"{draft.Id}: {draft.Quantity} x {draft.Product.Scent.Name} in {draft.Product.Bottle.Name}, {draft.TotalCost:F2} EUR");
+            Try(draft, "approve", draft.Approve);
+            Console.WriteLine($"   {draft.ApprovalNote}");
+        }
+
+//10. Observer: the order announces every state change to the observers subscribed at the moment
+Console.WriteLine("\n--- Observer ---");
+var audit = new AuditLogObserver();
+var stockKeeper = new BottleStockObserver(bottleInventory);
+var boutique = new CustomerNotifier("Riviera boutique");
+
+var bigOrder = new ProductionOrder("PO-009", batch, 60, approvalChain);
+bigOrder.Subscribe(audit);
+bigOrder.Subscribe(stockKeeper);
+bigOrder.Subscribe(boutique);
+Console.WriteLine($"{bigOrder.Id}: {bigOrder.Quantity} x {batch.Scent.Name}, glass bottles in stock: {bottleInventory.Available("Glass bottle")}");
+
+Try(bigOrder, "approve", bigOrder.Approve);
+Try(bigOrder, "start maceration", bigOrder.StartMaceration);
+bigOrder.Unsubscribe(audit);
+Console.WriteLine("  (audit log unsubscribed)");
+Try(bigOrder, "bottle", bigOrder.Bottle);
+Try(bigOrder, "ship", bigOrder.Ship);
+
+var nextOrder = new ProductionOrder("PO-010", batch, 80, approvalChain);
+Try(nextOrder, "approve", nextOrder.Approve);
+Console.WriteLine($"  {nextOrder.ApprovalNote}");
 
 
     }
