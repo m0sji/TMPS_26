@@ -11,6 +11,7 @@ using FragranceComposer.Proxies;
 using FragranceComposer.Decorators;
 using FragranceComposer.Approvals;
 using FragranceComposer.Observers;
+using FragranceComposer.Client;
 
 namespace FragranceComposer;
 
@@ -18,6 +19,13 @@ class Program
 {
     static void Main(string[] args)
     {
+
+        if(args.Contains("--interactive"))
+        {
+            new InteractiveMode().Run();
+            return;
+        }
+        
        IIngredientRepository repository = new InMemoryIngredientRepository();
        var builder = new FragranceBuilder(repository);
        var director = new FragranceDirector(builder);
