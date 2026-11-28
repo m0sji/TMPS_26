@@ -10,6 +10,7 @@ using FragranceComposer.Composites;
 using FragranceComposer.Proxies;
 using FragranceComposer.Decorators;
 using FragranceComposer.Approvals;
+using FragranceComposer.Observers;
 
 namespace FragranceComposer;
 
@@ -154,13 +155,14 @@ printer.Print(otherOrder);
 Console.WriteLine($"Same cost in any order? {gift.Cost == otherOrder.Cost}");
 
 //Aproval chain for the production order in section 8 and 9, built by the client
+IBottleInventory bottleInventory = new InMemoryBottleInventory();
 IApprovalHandler approvalChain = new SafetyLimitHandler(new Dictionary<string, double>
 {
     ["Jasmine"] = 20,
     ["Rose"] = 30
 });
 approvalChain
-.SetNext(new BottleStockHandler(new InMemoryBottleInventory()))
+.SetNext(new BottleStockHandler(bottleInventory))
 .SetNext(new CostApprovalHandler("Perfumer", 500m))
 .SetNext(new CostApprovalHandler("Lab manager", 1200m))
 .SetNext(new CostApprovalHandler("Director", 2000m));
@@ -215,6 +217,28 @@ ProductionOrder[] drafts =
             Console.WriteLine($"   {draft.ApprovalNote}");
         }
 
+//10. Observer: the order announces every state change to the observers subscribed at the moment
+Console.WriteLine("\n--- Observer ---");
+var audit = new AuditLogObserver();
+var stockKeeper = new BottleStockObserver(bottleInventory);
+var boutique = new CustomerNotifier("Riviera boutique");
+
+var bigOrder = new ProductionOrder("PO-009", batch, 60, approvalChain);
+bigOrder.Subscribe(audit);
+bigOrder.Subscribe(stockKeeper);
+bigOrder.Subscribe(boutique);
+Console.WriteLine($"{bigOrder.Id}: {bigOrder.Quantity} x {batch.Scent.Name}, glass bottles in stock: {bottleInventory.Available("Glass bottle")}");
+
+Try(bigOrder, "approve", bigOrder.Approve);
+Try(bigOrder, "start maceration", bigOrder.StartMaceration);
+bigOrder.Unsubscribe(audit);
+Console.WriteLine("  (audit log unsubscribed)");
+Try(bigOrder, "bottle", bigOrder.Bottle);
+Try(bigOrder, "ship", bigOrder.Ship);
+
+var nextOrder = new ProductionOrder("PO-010", batch, 80, approvalChain);
+Try(nextOrder, "approve", nextOrder.Approve);
+Console.WriteLine($"  {nextOrder.ApprovalNote}");
 
 
     }

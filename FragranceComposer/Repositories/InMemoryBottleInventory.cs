@@ -11,4 +11,8 @@ public class InMemoryBottleInventory : IBottleInventory
     };
 
     public int Available(string bottleName) => _stock.GetValueOrDefault(bottleName);
+    public void Take(string bottleName, int quantity)
+    {
+        _stock[bottleName] = Available(bottleName) - quantity;
+    }
 }
